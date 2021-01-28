@@ -13,3 +13,5 @@ The final piece is the lambda function, which is invoked each minute upon templa
 status. This function gets the public IP from AWS Parameter Store, which is updated by the cloudformation template.
 
 ## **Solution Overview**
+
+![Solution Diagram](https://raw.githubusercontent.com/hrmcardle0/ecs-task-and-service/main/diagram.png)
