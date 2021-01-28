@@ -1,0 +1,86 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+    ImageIdParam:
+        Type: String
+        Default: ami-0dc161e2e5f144ffc
+        Description: AMI of an ECS-optimized instance
+    InstanceTypeParam:
+        Type: String
+        Default: t2.small
+        Description: Intance Type of Cluster
+    IAMInstanceRoleParam: 
+        Type: String
+        Default: ecsInstanceRole
+        Description: Instance Role that must allow ECS interaction
+    InstanceSubnetParam:
+        Type: String
+        Description: Subnet ID of instance
+    InstanceSGParam:
+        Type: String
+        Description: Securtiy Group ID for instance
+    TaskNameParam:
+        Type: String
+        Description: Name of Task Definition 
+    TaskImageParam:
+        Type: String
+        Description: Image name to use for task
+        Default: amazon/amazon-ecs-sample
+    TaskFamilyParam:
+        Type: String
+        Description: Family of task
+Resources:
+    ECSCluster:
+        Type: AWS::ECS::Cluster
+        Properties:
+            ClusterName: SampleEc2Cluster
+    ECSIamInstanceProfile:
+        Type: AWS::IAM::InstanceProfile
+        Properties: 
+            Path: "/"
+            Roles:
+                - !Ref IAMInstanceRoleParam
+    ContainerInstance:
+        Type: AWS::EC2::Instance
+        Properties:
+            IamInstanceProfile: !Ref ECSIamInstanceProfile
+            ImageId: !Ref ImageIdParam
+            InstanceType: !Ref InstanceTypeParam
+            NetworkInterfaces:
+                - AssociatePublicIpAddress: "true"
+                  DeviceIndex: "0"
+                  GroupSet:
+                    - !Ref InstanceSGParam
+                  SubnetId: !Ref InstanceSubnetParam
+            UserData:
+                Fn::Base64: !Sub |
+                    #!/bin/bash
+                    sudo bash -c 'echo -e "ECS_CLUSTER=SampleEc2Cluster\nECS_BACKEND_HOST=" > /etc/ecs/ecs.config'
+    TaskDefinition:
+        Type: AWS::ECS::TaskDefinition
+        Properties:
+            ContainerDefinitions:
+                - Name: !Ref TaskNameParam
+                  Image: !Ref TaskImageParam
+                  CPU: 10
+                  PortMappings:
+                    - ContainerPort: 80
+                      HostPort: 80
+                      protocol: "tcp"
+                  Memory: 10
+                  Essential: true
+            Family: !Ref TaskFamilyParam
+    ECSService:
+        Type: AWS::ECS::Service
+        Properties:
+            Cluster: !Ref ECSCluster
+            DesiredCount: 1
+            TaskDefinition: !Ref TaskDefinition
+        DependsOn: ContainerInstance
+    PublicIp:
+        Type: AWS::SSM::Parameter
+        Properties:
+            Name: ECSInstanceUrl
+            Type: String
+            Value: !GetAtt ContainerInstance.PublicIp
+        DependsOn: ContainerInstance
+                      

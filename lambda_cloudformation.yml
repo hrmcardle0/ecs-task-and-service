@@ -1,0 +1,52 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Parameters:
+  SNSEmailParam:
+    Type: String
+    Default: example@google.com
+    Description: SNS Topic Endpoint Email Address
+  CodeUriBucketParam:
+    Type: String
+    Description: The full bucket URL to the code deployment package, such as s3://[Your-Bucket]/Deployment.zip
+Resources:
+  SNSTopic:
+    Type: AWS::SNS::Topic
+    Properties: 
+      TopicName: ECSInstanceStatus
+      Subscription:
+        - Endpoint: !Ref SNSEmailParam
+          Protocol: "email"
+  LambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: lambda_function.handler
+      Runtime: python3.7
+      CodeUri: !Ref CodeUriBucketParam
+      ReservedConcurrentExecutions: 30
+      Tracing: Active
+      Timeout: 120
+      Environment:
+        Variables:
+          SNSTopicName: !Ref SNSTopic
+      Policies:
+        - AWSLambdaExecute
+        - Version: '2012-10-17' 
+          Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:GetObjectACL
+              Resource: 'arn:aws:s3:::testing-stoneyhrm/*'
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+                - sns:*
+              Resource: '*'
+      Events:
+        CWSchedule:
+          Type: Schedule
+          Properties:
+            Schedule: 'rate(1 minute)'
+            Name: isWebsiteUp
+            Description: Test if ECS Website is upon
+            Enabled: true
