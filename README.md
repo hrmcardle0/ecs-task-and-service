@@ -10,6 +10,6 @@ A service is created from the task, and represents a persistent state of that ta
 without user intervention.
 
 The final piece is the lambda function, which is invoked each minute upon template creation. The function tests the container endpoint by cURLing the public IP of the cluster instance. It proceeds to send an sns message to a topic about the curent
-status.
+status. This function gets the public IP from AWS Parameter Store, which is updated by the cloudformation template.
 
 ## **Solution Overview**
